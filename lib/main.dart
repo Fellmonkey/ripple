@@ -1,20 +1,37 @@
 import 'package:flutter/material.dart';
+import 'core/constants/app_constants.dart';
+import 'core/di/injection_container.dart';
+import 'core/routes/app_router.dart';
+import 'core/theme/app_theme.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load();
+  // Initialize dependencies
+  await initializeDependencies();
+  
+  runApp(const RippleApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class RippleApp extends StatelessWidget {
+  const RippleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return MaterialApp(
+      title: AppConstants.appName,
+      debugShowCheckedModeBanner: false,
+      
+      // Theming
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
+      
+      
+      // Routing
+      onGenerateRoute: AppRouter.onGenerateRoute,
+      initialRoute: AppRouter.splash,
     );
   }
 }
