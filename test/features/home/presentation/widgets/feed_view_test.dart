@@ -7,8 +7,13 @@ import 'package:ripple/features/gratitude/presentation/bloc/gratitude_bloc.dart'
 import 'package:ripple/features/gratitude/presentation/bloc/gratitude_event.dart';
 import 'package:ripple/features/gratitude/presentation/bloc/gratitude_state.dart';
 import 'package:ripple/features/home/presentation/widgets/feed_view.dart';
+import 'package:ripple/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ripple/features/auth/presentation/bloc/auth_state.dart';
+
+class MockAuthBloc extends Mock implements AuthBloc {}
 
 class MockGratitudeBloc extends Mock implements GratitudeBloc {}
+late MockAuthBloc mockAuthBloc;
 
 void main() {
   late MockGratitudeBloc mockGratitudeBloc;
@@ -16,13 +21,21 @@ void main() {
   setUp(() {
     mockGratitudeBloc = MockGratitudeBloc();
     registerFallbackValue(const LoadGratitudes());
+
+    mockAuthBloc = MockAuthBloc();
+    // Default unauthenticated
+    when(() => mockAuthBloc.state).thenReturn(const Unauthenticated());
+    when(() => mockAuthBloc.stream).thenAnswer((_) => Stream.value(const Unauthenticated()));
   });
 
   Widget createWidgetUnderTest() {
     return MaterialApp(
       home: Scaffold(
-        body: BlocProvider<GratitudeBloc>.value(
-          value: mockGratitudeBloc,
+        body: MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: mockAuthBloc),
+            BlocProvider<GratitudeBloc>.value(value: mockGratitudeBloc),
+          ],
           child: const FeedView(),
         ),
       ),

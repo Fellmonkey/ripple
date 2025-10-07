@@ -165,7 +165,7 @@ void main() {
       expect(find.byType(Chip), findsNothing);
     });
 
-    testWidgets('does not display replies count when zero',
+    testWidgets('does display replies count when zero',
         (WidgetTester tester) async {
       // Arrange
       final gratitude = GratitudeEntity(
@@ -191,8 +191,9 @@ void main() {
         ),
       );
 
-      // Assert - reply icon should not be displayed
-      expect(find.byIcon(Icons.chat_bubble_outline), findsNothing);
+      // Assert
+      expect(find.text('0'), findsOneWidget);
+      expect(find.text('Reply'), findsOneWidget);
     });
 
     testWidgets('calls onTap callback when card is tapped',
