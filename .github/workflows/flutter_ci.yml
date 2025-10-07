@@ -24,6 +24,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create CI env file (no secrets committed)
+        run: |
+          mkdir -p assets
+          cat > assets/.env <<'EOF'
+          # CI placeholder
+          EOF
+
       - name: Run analyzer (strict)
         run: dart analyze --fatal-infos --fatal-warnings
 
