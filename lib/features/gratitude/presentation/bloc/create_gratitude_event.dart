@@ -16,6 +16,7 @@ class SubmitGratitude extends CreateGratitudeEvent {
   final List<String> tags;
   final (double, double) point;
   final String? photoUrl;
+  final String? parentId;
 
   const SubmitGratitude({
     required this.userId,
@@ -24,10 +25,11 @@ class SubmitGratitude extends CreateGratitudeEvent {
     required this.tags,
     required this.point,
     this.photoUrl,
+    this.parentId,
   });
 
   @override
-  List<Object?> get props => [userId, text, category, tags, point, photoUrl];
+  List<Object?> get props => [userId, text, category, tags, point, photoUrl, parentId];
 }
 
 /// Reset form

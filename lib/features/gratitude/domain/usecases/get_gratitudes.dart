@@ -13,12 +13,16 @@ class GetGratitudesUseCase {
     List<String>? tags,
     int limit = 50,
     int offset = 0,
+    String? currentUserId,
+    String? searchQuery,
   }) {
     return repository.getGratitudes(
       category: category,
       tags: tags,
       limit: limit,
       offset: offset,
+      currentUserId: currentUserId,
+      searchQuery: searchQuery,
     );
   }
 }

@@ -26,6 +26,7 @@ Future<void> showAddGratitudeBottomSheet(
   required ValueNotifier<LatLng?> selectedLocationNotifier,
   required ValueNotifier<bool> isSelectingLocationNotifier,
   LatLng? initialLocation,
+  String? parentId,
 }) async {
   return showModalBottomSheet(
     context: context,
@@ -37,6 +38,7 @@ Future<void> showAddGratitudeBottomSheet(
       initialLocation: initialLocation,
       selectedLocationNotifier: selectedLocationNotifier,
       isSelectingLocationNotifier: isSelectingLocationNotifier,
+      parentId: parentId,
     ),
   );
 }
@@ -45,11 +47,13 @@ class AddGratitudeBottomSheet extends StatefulWidget {
   final ValueNotifier<LatLng?> selectedLocationNotifier;
   final ValueNotifier<bool> isSelectingLocationNotifier;
   final LatLng? initialLocation;
+  final String? parentId;
 
   const AddGratitudeBottomSheet({
     required this.selectedLocationNotifier,
     required this.isSelectingLocationNotifier,
     this.initialLocation,
+    this.parentId,
     super.key,
   });
 
@@ -219,6 +223,7 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
         tags: tagsList,
         point: (_selectedLocation!.latitude, _selectedLocation!.longitude),
         photoUrl: photoUrl,
+        parentId: widget.parentId,
       ),
     );
   }
@@ -249,8 +254,16 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
               widget.isSelectingLocationNotifier.value = false;
               widget.selectedLocationNotifier.value = null;
 
+              // Show different message for replies vs new gratitudes
+              final isReply = widget.parentId != null;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Gratitude added successfully! 🎉')),
+                SnackBar(
+                  content: Text(
+                    isReply 
+                      ? 'Reply added successfully! 💬'
+                      : 'Gratitude added successfully! 🎉'
+                  ),
+                ),
               );
               Navigator.of(context).pop();
             } else if (state is CreateGratitudeError) {
@@ -297,11 +310,19 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
                     child: Row(
                       children: [
                         Text(
-                          'Add Gratitude',
+                          widget.parentId != null ? 'Add Reply' : 'Add Gratitude',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
+                        if (widget.parentId != null) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.reply,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 20,
+                          ),
+                        ],
                         const Spacer(),
                         IconButton(
                           icon: const Icon(Icons.close),

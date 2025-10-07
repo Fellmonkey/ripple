@@ -9,6 +9,8 @@ abstract class GratitudeRepository {
     List<String>? tags,
     int limit = 50,
     int offset = 0,
+    String? currentUserId,
+    String? searchQuery,
   });
 
   /// Create new gratitude
@@ -24,6 +26,7 @@ abstract class GratitudeRepository {
 
   /// Like/unlike gratitude
   Future<Result<GratitudeEntity>> toggleLike({
+    required String userId,
     required String gratitudeId,
     required int currentLikes,
     required bool isLiked,

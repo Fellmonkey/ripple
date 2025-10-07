@@ -11,6 +11,8 @@ abstract class GratitudeRemoteDataSource {
     List<String>? tags,
     int limit = 50,
     int offset = 0,
+    String? currentUserId,
+    String? searchQuery,
   });
 
   /// Create new gratitude
@@ -32,6 +34,24 @@ abstract class GratitudeRemoteDataSource {
 
   /// Get gratitude replies (chains)
   Future<List<GratitudeEntity>> getGratitudeReplies(String parentId);
+  
+  /// Check if user has liked specific gratitudes
+  Future<Set<String>> getUserLikedGratitudeIds({
+    required String userId,
+    required List<String> gratitudeIds,
+  });
+  
+  /// Add user like
+  Future<void> addUserLike({
+    required String userId,
+    required String gratitudeId,
+  });
+  
+  /// Remove user like
+  Future<void> removeUserLike({
+    required String userId,
+    required String gratitudeId,
+  });
 }
 
 class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
@@ -47,6 +67,8 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
     List<String>? tags,
     int limit = 50,
     int offset = 0,
+    String? currentUserId,
+    String? searchQuery,
   }) async {
     final queries = <String>[
       Query.limit(limit),
@@ -57,6 +79,15 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
     // Add category filter if provided
     if (category != null) {
       queries.add(Query.equal('category', category));
+    }
+
+    // Add search query for tags and text if provided
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      // Search in both tags and text fields
+      queries.add(Query.or([
+        Query.search('tags', searchQuery),
+        Query.search('text', searchQuery),
+      ]));
     }
 
     // Add tags search if provided
@@ -72,7 +103,63 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
       queries: queries,
     );
 
-    return response.rows.map(_mapToGratitudeEntity).toList();
+    final gratitudes = response.rows.map(_mapToGratitudeEntity).toList();
+    
+    // If we have gratitudes, count replies for each one
+    if (gratitudes.isNotEmpty) {
+      // Get all gratitude IDs
+      final gratitudeIds = gratitudes.map((g) => g.gratitudeId).toList();
+      
+      // Fetch all replies for these gratitudes in ONE query
+      final repliesResponse = await databases.listRows(
+        databaseId: AppwriteConfig.databaseId,
+        tableId: AppwriteConfig.gratitudesCollectionId,
+        queries: [
+          Query.isNotNull('parentId'),
+          Query.limit(1000), // Adjust if needed
+        ],
+      );
+      
+      // Count replies for each parent
+      final repliesCountMap = <String, int>{};
+      for (final replyDoc in repliesResponse.rows) {
+        final parentId = replyDoc.data['parentId'] as String?;
+        if (parentId != null && gratitudeIds.contains(parentId)) {
+          repliesCountMap[parentId] = (repliesCountMap[parentId] ?? 0) + 1;
+        }
+      }
+      
+      // Get liked status if user is logged in
+      Set<String> likedGratitudeIds = {};
+      if (currentUserId != null) {
+        likedGratitudeIds = await getUserLikedGratitudeIds(
+          userId: currentUserId,
+          gratitudeIds: gratitudeIds,
+        );
+      }
+      
+      // Update gratitudes with correct repliesCount and isLiked
+      return gratitudes.map((g) {
+        final replyCount = repliesCountMap[g.gratitudeId] ?? 0;
+        final isLiked = likedGratitudeIds.contains(g.gratitudeId);
+        return GratitudeEntity(
+          gratitudeId: g.gratitudeId,
+          authorId: g.authorId,
+          text: g.text,
+          category: g.category,
+          tags: g.tags,
+          point: g.point,
+          photo: g.photo,
+          likesCount: g.likesCount,
+          repliesCount: replyCount,
+          parentId: g.parentId,
+          createdAt: g.createdAt,
+          isLiked: isLiked,
+        );
+      }).toList();
+    }
+
+    return gratitudes;
   }
 
   @override
@@ -156,9 +243,81 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
       ),
       photo: data['photo'] as String?,
       likesCount: (data['likes'] as num?)?.toInt() ?? 0,
-      repliesCount: 0, // Calculated via parentId queries
+      repliesCount: 0, // Will be calculated in getGratitudes()
       parentId: data['parentId'] as String?,
       createdAt: DateTime.parse(doc.$createdAt),
+      isLiked: false, // Will be calculated in getGratitudes()
     );
+  }
+  
+  @override
+  Future<Set<String>> getUserLikedGratitudeIds({
+    required String userId,
+    required List<String> gratitudeIds,
+  }) async {
+    if (gratitudeIds.isEmpty) return {};
+    
+    // Query user_likes collection for this user and these gratitudes
+    final response = await databases.listRows(
+      databaseId: AppwriteConfig.databaseId,
+      tableId: AppwriteConfig.userLikesCollectionId,
+      queries: [
+        Query.equal('userId', userId),
+        Query.limit(1000), // Should be enough for pagination
+      ],
+    );
+    
+    // Filter to only gratitudes in our list and return as Set
+    return response.rows
+        .map((doc) => doc.data['gratitudeId'] as String)
+        .where((id) => gratitudeIds.contains(id))
+        .toSet();
+  }
+  
+  @override
+  Future<void> addUserLike({
+    required String userId,
+    required String gratitudeId,
+  }) async {
+    await databases.createRow(
+      databaseId: AppwriteConfig.databaseId,
+      tableId: AppwriteConfig.userLikesCollectionId,
+      rowId: ID.unique(),
+      data: {
+        'userId': userId,
+        'gratitudeId': gratitudeId,
+        'likedAt': DateTime.now().toIso8601String(),
+      },
+      permissions: [
+        Permission.read(Role.any()),
+        Permission.delete(Role.user(userId)),
+      ],
+    );
+  }
+  
+  @override
+  Future<void> removeUserLike({
+    required String userId,
+    required String gratitudeId,
+  }) async {
+    // Find the like document
+    final response = await databases.listRows(
+      databaseId: AppwriteConfig.databaseId,
+      tableId: AppwriteConfig.userLikesCollectionId,
+      queries: [
+        Query.equal('userId', userId),
+        Query.equal('gratitudeId', gratitudeId),
+        Query.limit(1),
+      ],
+    );
+    
+    if (response.rows.isNotEmpty) {
+      final likeDoc = response.rows.first;
+      await databases.deleteRow(
+        databaseId: AppwriteConfig.databaseId,
+        tableId: AppwriteConfig.userLikesCollectionId,
+        rowId: likeDoc.$id,
+      );
+    }
   }
 }

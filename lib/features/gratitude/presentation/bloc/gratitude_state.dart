@@ -56,3 +56,28 @@ class GratitudeError extends GratitudeState {
   @override
   List<Object?> get props => [message];
 }
+
+/// Replies loading state
+class GratitudeRepliesLoading extends GratitudeState {
+  const GratitudeRepliesLoading();
+}
+
+/// Replies loaded state
+class GratitudeRepliesLoaded extends GratitudeState {
+  final List<GratitudeEntity> replies;
+
+  const GratitudeRepliesLoaded(this.replies);
+
+  @override
+  List<Object?> get props => [replies];
+}
+
+/// Replies error state
+class GratitudeRepliesError extends GratitudeState {
+  final String message;
+
+  const GratitudeRepliesError(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}

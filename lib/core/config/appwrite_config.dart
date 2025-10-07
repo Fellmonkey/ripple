@@ -7,8 +7,9 @@ class AppwriteConfig {
   static String get projectId => dotenv.env['APPWRITE_PROJECT_ID'] ?? 'YOUR_PROJECT_ID';
   static String get databaseId => dotenv.env['APPWRITE_DATABASE_ID'] ?? 'ripple_db';
 
-  // Collections
+  // Tables
   static const String gratitudesCollectionId = 'gratitudes';
+  static const String userLikesCollectionId = 'user_likes';
   static const String achievementsDefinitionsCollectionId = 'achievements_definitions';
   static const String userAchievementsCollectionId = 'user_achievements';
 

@@ -30,6 +30,7 @@ class CreateGratitudeBloc extends Bloc<CreateGratitudeEvent, CreateGratitudeStat
         tags: event.tags,
         point: event.point,
         photoUrl: event.photoUrl,
+        parentId: event.parentId,
       ),
       loadingState: () => const CreateGratitudeSubmitting(),
       successState: (gratitude) => CreateGratitudeSuccess(gratitude),

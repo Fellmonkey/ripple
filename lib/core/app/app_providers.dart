@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_event.dart';
+import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/gratitude/presentation/bloc/gratitude_bloc.dart';
 import '../../features/gratitude/presentation/bloc/gratitude_event.dart';
 import '../di/injection_container.dart';
@@ -30,7 +31,29 @@ class AppProviders extends StatelessWidget {
         
         // Gratitude data state
         BlocProvider(
-          create: (_) => sl<GratitudeBloc>()..add(const LoadGratitudes()),
+          create: (context) {
+            final authBloc = context.read<AuthBloc>();
+            final gratitudeBloc = sl<GratitudeBloc>();
+            
+            // Listen to auth state changes to reload gratitudes with userId
+            authBloc.stream.listen((authState) {
+              if (authState is Authenticated) {
+                gratitudeBloc.add(LoadGratitudes(currentUserId: authState.user.$id));
+              } else {
+                gratitudeBloc.add(const LoadGratitudes());
+              }
+            });
+            
+            // Initial load
+            final currentState = authBloc.state;
+            if (currentState is Authenticated) {
+              gratitudeBloc.add(LoadGratitudes(currentUserId: currentState.user.$id));
+            } else {
+              gratitudeBloc.add(const LoadGratitudes());
+            }
+            
+            return gratitudeBloc;
+          },
         ),
       ],
       child: child,

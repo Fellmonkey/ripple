@@ -8,11 +8,13 @@ class GratitudeCard extends StatelessWidget {
   final GratitudeEntity gratitude;
   final VoidCallback? onTap;
   final VoidCallback? onLike;
+  final VoidCallback? onRepliesTap;
 
   const GratitudeCard({
     required this.gratitude,
     this.onTap,
     this.onLike,
+    this.onRepliesTap,
     super.key,
   });
 
@@ -141,7 +143,7 @@ class GratitudeCard extends StatelessWidget {
                 const SizedBox(height: 12),
               ],
 
-              // Footer: Likes + Author
+              // Footer: Likes + Replies + Author
               Row(
                 children: [
                   // Like button
@@ -157,15 +159,21 @@ class GratitudeCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.favorite_border,
+                            gratitude.isLiked 
+                              ? Icons.favorite 
+                              : Icons.favorite_border,
                             size: 18,
-                            color: theme.colorScheme.primary,
+                            color: gratitude.isLiked 
+                              ? Colors.red 
+                              : theme.colorScheme.primary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${gratitude.likesCount}',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.primary,
+                              color: gratitude.isLiked 
+                                ? Colors.red 
+                                : theme.colorScheme.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -175,10 +183,15 @@ class GratitudeCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
 
-                  // Replies count (if has parent or replies)
-                  if (gratitude.repliesCount > 0)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                  // Replies button (always visible)
+                  InkWell(
+                    onTap: onRepliesTap,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -189,14 +202,18 @@ class GratitudeCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${gratitude.repliesCount}',
+                            gratitude.repliesCount > 0 
+                              ? '${gratitude.repliesCount}'
+                              : 'Reply',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
+                  ),
 
                   const Spacer(),
 

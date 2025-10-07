@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../gratitude/presentation/bloc/gratitude_bloc.dart';
 import '../../../gratitude/presentation/bloc/gratitude_event.dart';
 import '../../../gratitude/presentation/bloc/gratitude_state.dart';
+import '../../../gratitude/presentation/screens/replies_bottom_sheet.dart';
 import '../../../gratitude/presentation/widgets/gratitude_card.dart';
 
 /// Feed view widget showing list of gratitudes
@@ -81,7 +84,9 @@ class _FeedViewState extends State<FeedView> {
                       ElevatedButton.icon(
                         key: const Key('retry_button'),
                         onPressed: () {
-                          context.read<GratitudeBloc>().add(const LoadGratitudes());
+                          final authState = context.read<AuthBloc>().state;
+                          final userId = authState is Authenticated ? authState.user.$id : null;
+                          context.read<GratitudeBloc>().add(LoadGratitudes(currentUserId: userId));
                         },
                         icon: const Icon(Icons.refresh),
                         label: const Text('Retry'),
@@ -125,7 +130,9 @@ class _FeedViewState extends State<FeedView> {
                 return RefreshIndicator(
                   key: const Key('feed_refresh'),
                   onRefresh: () async {
-                    context.read<GratitudeBloc>().add(const LoadGratitudes());
+                    final authState = context.read<AuthBloc>().state;
+                    final userId = authState is Authenticated ? authState.user.$id : null;
+                    context.read<GratitudeBloc>().add(LoadGratitudes(currentUserId: userId));
                     await Future.delayed(const Duration(milliseconds: 500));
                   },
                   child: ListView.builder(
@@ -137,6 +144,11 @@ class _FeedViewState extends State<FeedView> {
                     itemCount: gratitudes.length,
                     itemBuilder: (context, index) {
                       final gratitude = gratitudes[index];
+                      
+                      // Get userId from AuthBloc
+                      final authState = context.watch<AuthBloc>().state;
+                      final userId = authState is Authenticated ? authState.user.$id : null;
+                      
                       return GratitudeCard(
                         key: Key('gratitude_card_$index'),
                         gratitude: gratitude,
@@ -148,13 +160,20 @@ class _FeedViewState extends State<FeedView> {
                             ),
                           );
                         },
-                        onLike: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Like feature coming soon!'),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
+                        onLike: userId != null
+                            ? () {
+                                context.read<GratitudeBloc>().add(
+                                      ToggleGratitudeLike(
+                                        userId: userId,
+                                        gratitudeId: gratitude.gratitudeId,
+                                        currentLikes: gratitude.likesCount,
+                                        isLiked: gratitude.isLiked,
+                                      ),
+                                    );
+                              }
+                            : null,
+                        onRepliesTap: () {
+                          showRepliesBottomSheet(context, gratitude);
                         },
                       );
                     },

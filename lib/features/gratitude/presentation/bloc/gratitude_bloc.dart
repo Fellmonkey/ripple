@@ -4,6 +4,7 @@ import '../../../../core/error/models/result.dart';
 import '../../../../core/mixins/base_bloc_mixin.dart';
 import '../../domain/entities/gratitude_entity.dart';
 import '../../domain/usecases/get_gratitudes.dart';
+import '../../domain/usecases/get_replies.dart';
 import '../../domain/usecases/toggle_like.dart';
 import 'gratitude_event.dart';
 import 'gratitude_state.dart';
@@ -14,15 +15,18 @@ import 'gratitude_state.dart';
 class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
     with BaseBlocMixin<GratitudeEvent, GratitudeState> {
   final GetGratitudesUseCase getGratitudes;
+  final GetRepliesUseCase getReplies;
   final ToggleLikeUseCase toggleLike;
 
   GratitudeBloc({
     required this.getGratitudes,
+    required this.getReplies,
     required this.toggleLike,
   }) : super(const GratitudeInitial()) {
     on<LoadGratitudes>(_onLoadGratitudes);
     on<RefreshGratitudes>(_onRefreshGratitudes);
     on<ToggleGratitudeLike>(_onToggleGratitudeLike);
+    on<LoadReplies>(_onLoadReplies);
   }
 
   Future<void> _onLoadGratitudes(
@@ -33,6 +37,7 @@ class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
       operation: () => getGratitudes(
         category: event.category,
         tags: event.tags,
+        currentUserId: event.currentUserId,
       ),
       loadingState: () => const GratitudeLoading(),
       successState: (gratitudes) => GratitudeLoaded(
@@ -97,6 +102,7 @@ class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
 
     // Actual API call
     final result = await toggleLike(
+      userId: event.userId,
       gratitudeId: event.gratitudeId,
       currentLikes: event.currentLikes,
       isLiked: event.isLiked,
@@ -109,6 +115,20 @@ class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
         print('❌ BLoC ERROR [GratitudeBloc.Toggle like]: ${result.failure?.userMessage}');
       }
     }
+  }
+
+  Future<void> _onLoadReplies(
+    LoadReplies event,
+    Emitter<GratitudeState> emit,
+  ) async {
+    await executeWithStates(
+      operation: () => getReplies(event.parentId),
+      loadingState: () => const GratitudeRepliesLoading(),
+      successState: (replies) => GratitudeRepliesLoaded(replies),
+      errorState: (error) => GratitudeRepliesError(error),
+      emit: emit,
+      operationName: 'Load replies',
+    );
   }
 
   /// Helper to create copy of gratitude with updated likes
@@ -125,6 +145,7 @@ class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
       createdAt: g.createdAt,
       photo: g.photo,
       parentId: g.parentId,
+      isLiked: !isLiked, // Toggle the liked status
     );
   }
 }

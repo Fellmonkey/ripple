@@ -19,24 +19,48 @@ class GratitudeMarker extends StatelessWidget {
     
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: _getCategoryColor(category),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: _getCategoryColor(category),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            _getCategoryEmoji(category),
-            style: const TextStyle(fontSize: 20),
+            child: Center(
+              child: Text(
+                _getCategoryEmoji(category),
+                style: const TextStyle(fontSize: 20),
+              ),
+            ),
           ),
-        ),
+          // Replies indicator
+          if (gratitude.repliesCount > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(
+                  Icons.chat_bubble,
+                  size: 12,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

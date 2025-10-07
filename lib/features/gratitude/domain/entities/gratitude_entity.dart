@@ -13,6 +13,7 @@ class GratitudeEntity extends Equatable {
   final int repliesCount;
   final String? parentId;
   final DateTime createdAt;
+  final bool isLiked; // Whether current user has liked this gratitude
 
   const GratitudeEntity({
     required this.gratitudeId,
@@ -26,6 +27,7 @@ class GratitudeEntity extends Equatable {
     required this.createdAt,
     this.photo,
     this.parentId,
+    this.isLiked = false,
   });
 
   @override
@@ -41,5 +43,6 @@ class GratitudeEntity extends Equatable {
         repliesCount,
         parentId,
         createdAt,
+        isLiked,
       ];
 }

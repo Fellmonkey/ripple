@@ -9,11 +9,13 @@ class ToggleLikeUseCase {
   ToggleLikeUseCase(this.repository);
 
   Future<Result<GratitudeEntity>> call({
+    required String userId,
     required String gratitudeId,
     required int currentLikes,
     required bool isLiked,
   }) {
     return repository.toggleLike(
+      userId: userId,
       gratitudeId: gratitudeId,
       currentLikes: currentLikes,
       isLiked: isLiked,

@@ -5,6 +5,7 @@ import '../data/repositories/gratitude_repository_impl.dart';
 import '../domain/repositories/gratitude_repository.dart';
 import '../domain/usecases/create_gratitude.dart';
 import '../domain/usecases/get_gratitudes.dart';
+import '../domain/usecases/get_replies.dart';
 import '../domain/usecases/toggle_like.dart';
 import '../domain/usecases/upload_photo.dart';
 import '../presentation/bloc/create_gratitude_bloc.dart';
@@ -32,6 +33,7 @@ void initGratitudeDependencies() {
 
   // Use cases
   sl.registerLazySingleton(() => GetGratitudesUseCase(sl()));
+  sl.registerLazySingleton(() => GetRepliesUseCase(sl()));
   sl.registerLazySingleton(() => CreateGratitudeUseCase(sl()));
   sl.registerLazySingleton(() => ToggleLikeUseCase(sl()));
   sl.registerLazySingleton<UploadPhotoUseCase>(
@@ -42,6 +44,7 @@ void initGratitudeDependencies() {
   sl.registerFactory(
     () => GratitudeBloc(
       getGratitudes: sl(),
+      getReplies: sl(),
       toggleLike: sl(),
     ),
   );

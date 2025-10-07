@@ -4,11 +4,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/gratitude_entity.dart';
 import '../bloc/gratitude_bloc.dart';
 import '../bloc/gratitude_event.dart';
 import '../bloc/gratitude_state.dart';
 import '../widgets/gratitude_marker.dart';
+import 'replies_bottom_sheet.dart';
 
 /// Interactive map screen showing gratitude markers
 class MapScreen extends StatefulWidget {
@@ -30,8 +33,12 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get userId from AuthBloc
+    final authState = context.watch<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.user.$id : null;
+    
     return BlocProvider(
-      create: (_) => sl<GratitudeBloc>()..add(const LoadGratitudes()),
+      create: (_) => sl<GratitudeBloc>()..add(LoadGratitudes(currentUserId: userId)),
       child: Scaffold(
         body: BlocBuilder<GratitudeBloc, GratitudeState>(
           builder: (context, state) {
@@ -223,6 +230,21 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ],
                 ),
+                // View Replies button
+                if (gratitude.repliesCount > 0) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        showRepliesBottomSheet(context, gratitude);
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: Text('View ${gratitude.repliesCount} ${gratitude.repliesCount == 1 ? 'Reply' : 'Replies'}'),
+                    ),
+                  ),
+                ],
               ],
             ),
           );

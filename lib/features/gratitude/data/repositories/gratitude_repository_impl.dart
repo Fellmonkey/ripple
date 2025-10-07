@@ -16,6 +16,8 @@ class GratitudeRepositoryImpl implements GratitudeRepository {
     List<String>? tags,
     int limit = 50,
     int offset = 0,
+    String? currentUserId,
+    String? searchQuery,
   }) {
     return SafeExecutor.execute(
       () => remoteDataSource.getGratitudes(
@@ -23,6 +25,8 @@ class GratitudeRepositoryImpl implements GratitudeRepository {
         tags: tags,
         limit: limit,
         offset: offset,
+        currentUserId: currentUserId,
+        searchQuery: searchQuery,
       ),
       operationName: 'Get gratitudes',
     );
@@ -54,16 +58,33 @@ class GratitudeRepositoryImpl implements GratitudeRepository {
 
   @override
   Future<Result<GratitudeEntity>> toggleLike({
+    required String userId,
     required String gratitudeId,
     required int currentLikes,
     required bool isLiked,
-  }) {
-    final newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
+  }) async {
     return SafeExecutor.execute(
-      () => remoteDataSource.updateGratitudeLikes(
-        gratitudeId: gratitudeId,
-        likes: newLikes,
-      ),
+      () async {
+        // Update the like in user_likes collection
+        if (isLiked) {
+          await remoteDataSource.removeUserLike(
+            userId: userId,
+            gratitudeId: gratitudeId,
+          );
+        } else {
+          await remoteDataSource.addUserLike(
+            userId: userId,
+            gratitudeId: gratitudeId,
+          );
+        }
+        
+        // Update the likes count in gratitudes collection
+        final newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
+        return remoteDataSource.updateGratitudeLikes(
+          gratitudeId: gratitudeId,
+          likes: newLikes,
+        );
+      },
       operationName: 'Toggle like',
     );
   }
