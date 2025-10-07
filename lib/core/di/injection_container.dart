@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/auth/di/auth_di.dart';
 import '../services/appwrite_service.dart';
 
 final sl = GetIt.instance;
@@ -14,4 +15,10 @@ Future<void> initializeDependencies() async {
   final appwriteService = AppwriteService();
   appwriteService.initialize();
   sl.registerLazySingleton<AppwriteService>(() => appwriteService);
+
+  // Register Appwrite Account service for auth
+  sl.registerLazySingleton(() => appwriteService.account);
+
+  // Feature dependencies
+  await initAuthDependencies(sl);
 }

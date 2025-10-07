@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 
 /// Application router for navigation
@@ -23,7 +24,7 @@ class AppRouter {
         );
       case AppRouter.home:
         return MaterialPageRoute(
-          builder: (_) => const Placeholder(), // TODO: Implement HomeScreen
+          builder: (_) => const HomeScreen(),
         );
       case AppRouter.addGratitude:
         return MaterialPageRoute(
