@@ -17,6 +17,30 @@ import '../bloc/create_gratitude_state.dart';
 import '../bloc/gratitude_bloc.dart';
 import '../bloc/gratitude_event.dart';
 
+/// Lightweight structure to hold draft form values while selecting location
+class GratitudeDraft {
+  final String text;
+  final String tags;
+  final GratitudeCategory category;
+  final String? photoPath;
+
+  const GratitudeDraft({
+    required this.text,
+    required this.tags,
+    required this.category,
+    this.photoPath,
+  });
+
+  GratitudeDraft copyWith({String? text, String? tags, GratitudeCategory? category, String? photoPath}) {
+    return GratitudeDraft(
+      text: text ?? this.text,
+      tags: tags ?? this.tags,
+      category: category ?? this.category,
+      photoPath: photoPath ?? this.photoPath,
+    );
+  }
+}
+
 /// Bottom sheet for adding gratitude with map in background
 /// 
 /// Shows half-screen form with ability to select location on map
@@ -25,10 +49,12 @@ Future<void> showAddGratitudeBottomSheet(
   BuildContext context, {
   required ValueNotifier<LatLng?> selectedLocationNotifier,
   required ValueNotifier<bool> isSelectingLocationNotifier,
+  ValueNotifier<GratitudeDraft?>? draftNotifier,
   LatLng? initialLocation,
   String? parentId,
 }) async {
-  return showModalBottomSheet(
+  // Await the sheet so we can clear the draft when the user closes it.
+  await showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     isDismissible: true,
@@ -38,9 +64,22 @@ Future<void> showAddGratitudeBottomSheet(
       initialLocation: initialLocation,
       selectedLocationNotifier: selectedLocationNotifier,
       isSelectingLocationNotifier: isSelectingLocationNotifier,
+      draftNotifier: draftNotifier,
       parentId: parentId,
     ),
   );
+
+  // When the sheet is dismissed, clear the shared draft so reopening starts fresh.
+  try {
+    // Only clear the shared draft if the user is not currently in map-selection mode.
+    // If `isSelectingLocationNotifier` is true it means the user left the sheet to
+    // select a location on the map — in that case preserve the draft so fields
+    // are restored when they come back.
+    if (isSelectingLocationNotifier.value == false) {
+      draftNotifier?.value = null;
+    }
+  } catch (_) {}
+  return;
 }
 
 class AddGratitudeBottomSheet extends StatefulWidget {
@@ -48,12 +87,14 @@ class AddGratitudeBottomSheet extends StatefulWidget {
   final ValueNotifier<bool> isSelectingLocationNotifier;
   final LatLng? initialLocation;
   final String? parentId;
+  final ValueNotifier<GratitudeDraft?>? draftNotifier;
 
   const AddGratitudeBottomSheet({
     required this.selectedLocationNotifier,
     required this.isSelectingLocationNotifier,
     this.initialLocation,
     this.parentId,
+    this.draftNotifier,
     super.key,
   });
 
@@ -71,6 +112,18 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
   LatLng? _selectedLocation;
   bool _isLoadingLocation = false;
   String? _selectedPhotoPath;
+  // Draft notifier holds current form values while the user toggles map selection
+  late final ValueNotifier<GratitudeDraft?> _draftNotifier;
+  late final bool _ownsDraftNotifier;
+
+  void _updateDraft() {
+    _draftNotifier.value = GratitudeDraft(
+      text: _textController.text,
+      tags: _tagsController.text,
+      category: _selectedCategory,
+      photoPath: _selectedPhotoPath,
+    );
+  }
 
   @override
   void initState() {
@@ -79,6 +132,30 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
     
     // Listen to selected location changes from map
     widget.selectedLocationNotifier.addListener(_onLocationSelected);
+    // Listen to enter/exit map selection mode to persist form values
+    widget.isSelectingLocationNotifier.addListener(_onSelectingChanged);
+
+    // Use external draftNotifier if provided, otherwise create an internal one
+    if (widget.draftNotifier != null) {
+      _draftNotifier = widget.draftNotifier!;
+      _ownsDraftNotifier = false;
+    } else {
+      _draftNotifier = ValueNotifier<GratitudeDraft?>(null);
+      _ownsDraftNotifier = true;
+    }
+
+    // If a draft already exists (shared notifier), prefill the controllers
+    final existing = _draftNotifier.value;
+    if (existing != null) {
+      _textController.text = existing.text;
+      _tagsController.text = existing.tags;
+      _selectedCategory = existing.category;
+      _selectedPhotoPath = existing.photoPath;
+    }
+
+    // Keep draft updated when user types or changes category/photo
+    _textController.addListener(_updateDraft);
+    _tagsController.addListener(_updateDraft);
     
     // Initialize selectedLocationNotifier with current location
     if (_selectedLocation != null) {
@@ -93,9 +170,38 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
   @override
   void dispose() {
     widget.selectedLocationNotifier.removeListener(_onLocationSelected);
+    widget.isSelectingLocationNotifier.removeListener(_onSelectingChanged);
+    _textController.removeListener(_updateDraft);
+    _tagsController.removeListener(_updateDraft);
     _textController.dispose();
     _tagsController.dispose();
+    if (_ownsDraftNotifier) {
+      _draftNotifier.dispose();
+    }
     super.dispose();
+  }
+
+  void _onSelectingChanged() {
+    final isSelecting = widget.isSelectingLocationNotifier.value;
+    if (isSelecting) {
+      // Persist current draft before showing the map
+      _updateDraft();
+    } else {
+      // Restore draft when returning from map selection
+      final draft = _draftNotifier.value;
+      if (draft != null) {
+        setState(() {
+          _textController.text = draft.text;
+          _tagsController.text = draft.tags;
+          _selectedCategory = draft.category;
+          _selectedPhotoPath = draft.photoPath;
+        });
+      }
+      // Do not clear external draftNotifier here; only clear internal drafts
+      if (_ownsDraftNotifier) {
+        _draftNotifier.value = null;
+      }
+    }
   }
 
   void _onLocationSelected() {
@@ -163,6 +269,7 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
       if (pickedFile != null) {
         setState(() {
           _selectedPhotoPath = pickedFile.path;
+          _updateDraft();
         });
       }
     } catch (e) {
@@ -177,6 +284,7 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
   void _removePhoto() {
     setState(() {
       _selectedPhotoPath = null;
+      _updateDraft();
     });
   }
 
@@ -253,6 +361,11 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
               // Reset notifiers when closing
               widget.isSelectingLocationNotifier.value = false;
               widget.selectedLocationNotifier.value = null;
+
+              // Clear draft (either internal or external) after successful submit
+              try {
+                _draftNotifier.value = null;
+              } catch (_) {}
 
               // Show different message for replies vs new gratitudes
               final isReply = widget.parentId != null;
@@ -358,7 +471,7 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Map selection hint
+                                // Compact map-selection hint (no draft preview)
                                 ValueListenableBuilder<bool>(
                                   valueListenable: widget.isSelectingLocationNotifier,
                                   builder: (context, isSelecting, _) {
@@ -367,27 +480,21 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
                                       padding: const EdgeInsets.all(12),
                                       margin: const EdgeInsets.only(bottom: 16),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primaryContainer,
+                                        color: Theme.of(context).colorScheme.primaryContainer,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
                                         children: [
                                           Icon(
                                             Icons.touch_app,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onPrimaryContainer,
+                                            color: Theme.of(context).colorScheme.onPrimaryContainer,
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Text(
                                               'Tap on the map behind to select location',
                                               style: TextStyle(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onPrimaryContainer,
+                                                color: Theme.of(context).colorScheme.onPrimaryContainer,
                                               ),
                                             ),
                                           ),

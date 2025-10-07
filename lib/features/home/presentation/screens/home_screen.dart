@@ -21,6 +21,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final ValueNotifier<LatLng?> _selectedMapLocation = ValueNotifier<LatLng?>(null);
   final ValueNotifier<bool> _isSelectingLocation = ValueNotifier<bool>(false);
+  // Shared draft for add-gratitude flow so form values persist when opening map
+  final ValueNotifier<GratitudeDraft?> _gratitudeDraftNotifier = ValueNotifier<GratitudeDraft?>(null);
 
   @override
   void dispose() {
@@ -79,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
             context,
             selectedLocationNotifier: _selectedMapLocation,
             isSelectingLocationNotifier: _isSelectingLocation,
+            draftNotifier: _gratitudeDraftNotifier,
           );
         },
         icon: const Icon(Icons.add),
