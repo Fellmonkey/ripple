@@ -5,7 +5,7 @@ import '../config/appwrite_config.dart';
 class AppwriteService {
   late final Client _client;
   late final Account account;
-  late final Databases databases;
+  late final TablesDB databases;
   late final Storage storage;
   late final Functions functions;
 
@@ -16,7 +16,7 @@ class AppwriteService {
         .setSelfSigned(status: kDebugMode);
 
     account = Account(_client);
-    databases = Databases(_client);
+    databases = TablesDB(_client);
     storage = Storage(_client);
     functions = Functions(_client);
   }

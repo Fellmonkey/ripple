@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+import '../../../gratitude/presentation/screens/add_gratitude_bottom_sheet.dart';
+import '../../../gratitude/presentation/screens/map_screen.dart';
 
 /// Home screen with map and gratitude feed
 /// 
@@ -15,6 +18,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final ValueNotifier<LatLng?> _selectedMapLocation = ValueNotifier<LatLng?>(null);
+  final ValueNotifier<bool> _isSelectingLocation = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _selectedMapLocation.dispose();
+    _isSelectingLocation.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          _MapView(),
-          _FeedView(),
+        children: [
+          MapScreen(
+            selectedLocationNotifier: _selectedMapLocation,
+            isSelectingLocationNotifier: _isSelectingLocation,
+          ),
+          const _FeedView(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -59,41 +74,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // TODO: Navigate to add gratitude
+          showAddGratitudeBottomSheet(
+            context,
+            selectedLocationNotifier: _selectedMapLocation,
+            isSelectingLocationNotifier: _isSelectingLocation,
+          );
         },
         icon: const Icon(Icons.add),
         label: const Text('Add Thanks'),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
-}
-
-class _MapView extends StatelessWidget {
-  const _MapView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.grey[200],
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.map, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Map View',
-              style: TextStyle(fontSize: 24, color: Colors.grey),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'TODO: Implement flutter_map',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

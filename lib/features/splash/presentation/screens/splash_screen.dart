@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/di/injection_container.dart';
 import '../../../../core/routes/app_router.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
@@ -14,10 +13,8 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<AuthBloc>()..add(const CheckAuthStatus()),
-      child: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
           if (state is Authenticated) {
             // User is authenticated, navigate to home
             Navigator.of(context).pushReplacementNamed(AppRouter.home);
@@ -27,8 +24,7 @@ class SplashScreen extends StatelessWidget {
           }
         },
         child: const _SplashView(),
-      ),
-    );
+      );
   }
 }
 
