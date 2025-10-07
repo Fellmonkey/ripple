@@ -24,25 +24,44 @@ class GratitudeLoaded extends GratitudeState {
   final List<GratitudeEntity> gratitudes;
   final String? activeCategory;
   final List<String>? activeTags;
+  final String? searchQuery;
+  final bool hasMoreData;
+  final bool isLoadingMore;
 
   const GratitudeLoaded({
     required this.gratitudes,
     this.activeCategory,
     this.activeTags,
+    this.searchQuery,
+    this.hasMoreData = true,
+    this.isLoadingMore = false,
   });
 
   @override
-  List<Object?> get props => [gratitudes, activeCategory, activeTags];
+  List<Object?> get props => [
+        gratitudes,
+        activeCategory,
+        activeTags,
+        searchQuery,
+        hasMoreData,
+        isLoadingMore,
+      ];
 
   GratitudeLoaded copyWith({
     List<GratitudeEntity>? gratitudes,
     String? activeCategory,
     List<String>? activeTags,
+    String? searchQuery,
+    bool? hasMoreData,
+    bool? isLoadingMore,
   }) {
     return GratitudeLoaded(
       gratitudes: gratitudes ?? this.gratitudes,
       activeCategory: activeCategory ?? this.activeCategory,
       activeTags: activeTags ?? this.activeTags,
+      searchQuery: searchQuery ?? this.searchQuery,
+      hasMoreData: hasMoreData ?? this.hasMoreData,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 }

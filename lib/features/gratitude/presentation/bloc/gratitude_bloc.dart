@@ -27,6 +27,9 @@ class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
     on<RefreshGratitudes>(_onRefreshGratitudes);
     on<ToggleGratitudeLike>(_onToggleGratitudeLike);
     on<LoadReplies>(_onLoadReplies);
+    on<SearchGratitudes>(_onSearchGratitudes);
+    on<ClearSearch>(_onClearSearch);
+    on<LoadMoreGratitudes>(_onLoadMoreGratitudes);
   }
 
   Future<void> _onLoadGratitudes(
@@ -38,17 +41,121 @@ class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
         category: event.category,
         tags: event.tags,
         currentUserId: event.currentUserId,
+        searchQuery: event.searchQuery,
       ),
       loadingState: () => const GratitudeLoading(),
       successState: (gratitudes) => GratitudeLoaded(
         gratitudes: gratitudes,
         activeCategory: event.category,
         activeTags: event.tags,
+        searchQuery: event.searchQuery,
       ),
       errorState: (error) => GratitudeError(error),
       emit: emit,
       operationName: 'Load gratitudes',
     );
+  }
+
+  Future<void> _onSearchGratitudes(
+    SearchGratitudes event,
+    Emitter<GratitudeState> emit,
+  ) async {
+    await executeWithStates(
+      operation: () => getGratitudes(
+        searchQuery: event.searchQuery,
+        currentUserId: event.currentUserId,
+      ),
+      loadingState: () => const GratitudeLoading(),
+      successState: (gratitudes) => GratitudeLoaded(
+        gratitudes: gratitudes,
+        searchQuery: event.searchQuery,
+      ),
+      errorState: (error) => GratitudeError(error),
+      emit: emit,
+      operationName: 'Search gratitudes',
+    );
+  }
+
+  Future<void> _onClearSearch(
+    ClearSearch event,
+    Emitter<GratitudeState> emit,
+  ) async {
+    await executeWithStates(
+      operation: () => getGratitudes(
+        currentUserId: event.currentUserId,
+      ),
+      loadingState: () => const GratitudeLoading(),
+      successState: (gratitudes) => GratitudeLoaded(
+        gratitudes: gratitudes,
+      ),
+      errorState: (error) => GratitudeError(error),
+      emit: emit,
+      operationName: 'Clear search',
+    );
+  }
+
+  Future<void> _onLoadMoreGratitudes(
+    LoadMoreGratitudes event,
+    Emitter<GratitudeState> emit,
+  ) async {
+    // Only load more if we're in a loaded state
+    if (state is! GratitudeLoaded) return;
+
+    final currentState = state as GratitudeLoaded;
+    
+    // Don't load if already loading or no more data
+    if (currentState.isLoadingMore || !currentState.hasMoreData) return;
+
+    // Set loading more flag
+    emit(currentState.copyWith(isLoadingMore: true));
+
+    try {
+      // Calculate offset from current gratitudes length
+      final offset = currentState.gratitudes.length;
+      const limit = 50; // Default page size
+
+      // Load more gratitudes with current filters and search
+      final result = await getGratitudes(
+        category: currentState.activeCategory,
+        tags: currentState.activeTags,
+        currentUserId: event.currentUserId,
+        searchQuery: event.searchQuery,
+        limit: limit,
+        offset: offset,
+      );
+
+      // Handle result
+      if (result.isSuccess && result.data != null) {
+        final newGratitudes = result.data!;
+        
+        // Append new gratitudes to existing list
+        final updatedGratitudes = [
+          ...currentState.gratitudes,
+          ...newGratitudes,
+        ];
+
+        // Update hasMoreData flag based on result count
+        final hasMoreData = newGratitudes.length == limit;
+
+        emit(currentState.copyWith(
+          gratitudes: updatedGratitudes,
+          isLoadingMore: false,
+          hasMoreData: hasMoreData,
+        ));
+      } else {
+        // On error, just stop loading
+        emit(currentState.copyWith(isLoadingMore: false));
+        if (kDebugMode) {
+          print('❌ BLoC ERROR [GratitudeBloc.Load more]: ${result.failure?.userMessage}');
+        }
+      }
+    } catch (e) {
+      // On exception, stop loading
+      emit(currentState.copyWith(isLoadingMore: false));
+      if (kDebugMode) {
+        print('❌ BLoC EXCEPTION [GratitudeBloc.Load more]: $e');
+      }
+    }
   }
 
   Future<void> _onRefreshGratitudes(

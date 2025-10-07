@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -107,19 +108,52 @@ class _MapScreenState extends State<MapScreen> {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.example.ripple',
         ),
-        // Gratitude markers
-        MarkerLayer(
-          markers: gratitudes.map((gratitude) {
-            return Marker(
-              width: 40,
-              height: 40,
-              point: LatLng(gratitude.point.$1, gratitude.point.$2),
-              child: GratitudeMarker(
-                gratitude: gratitude,
-                onTap: () => _showGratitudeDetails(context, gratitude),
-              ),
-            );
-          }).toList(),
+        // Gratitude markers with clustering
+        MarkerClusterLayerWidget(
+          options: MarkerClusterLayerOptions(
+            maxClusterRadius: 80,
+            size: const Size(40, 40),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(50),
+            maxZoom: 15,
+            markers: gratitudes.map((gratitude) {
+              return Marker(
+                width: 40,
+                height: 40,
+                point: LatLng(gratitude.point.$1, gratitude.point.$2),
+                child: GratitudeMarker(
+                  gratitude: gratitude,
+                  onTap: () => _showGratitudeDetails(context, gratitude),
+                ),
+              );
+            }).toList(),
+            builder: (context, markers) {
+              // Custom cluster appearance
+              return Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(context).primaryColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(50),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    markers.length.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
         // Selected location marker (when picking location)
         if (widget.selectedLocationNotifier != null)
