@@ -1,12 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/error/models/result.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/gratitude_category.dart';
+import '../../domain/usecases/upload_photo.dart';
 import '../bloc/create_gratitude_bloc.dart';
 import '../bloc/create_gratitude_event.dart';
 import '../bloc/create_gratitude_state.dart';
@@ -57,10 +61,12 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
   final _formKey = GlobalKey<FormState>();
   final _textController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _imagePicker = ImagePicker();
 
   GratitudeCategory _selectedCategory = GratitudeCategory.other;
   LatLng? _selectedLocation;
   bool _isLoadingLocation = false;
+  String? _selectedPhotoPath;
 
   @override
   void initState() {
@@ -141,7 +147,36 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
     }
   }
 
-  void _submitForm(String userId, CreateGratitudeBloc createBloc) {
+  Future<void> _pickPhoto() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedPhotoPath = pickedFile.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick photo: $e')),
+        );
+      }
+    }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _selectedPhotoPath = null;
+    });
+  }
+
+  void _submitForm(String userId, CreateGratitudeBloc createBloc) async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,6 +195,22 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
             .where((tag) => tag.isNotEmpty)
             .toList();
 
+    // Upload photo if selected
+    String? photoUrl;
+    if (_selectedPhotoPath != null) {
+      final uploadPhotoUseCase = sl<UploadPhotoUseCase>();
+      final result = await uploadPhotoUseCase(_selectedPhotoPath!);
+      
+      if (result.isError && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo upload failed: ${result.failure!.userMessage}')),
+        );
+        return;
+      }
+      
+      photoUrl = result.data;
+    }
+
     createBloc.add(
       SubmitGratitude(
         userId: userId,
@@ -167,6 +218,7 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
         category: _selectedCategory.value, // Use enum value (HEALTH, NATURE, etc.)
         tags: tagsList,
         point: (_selectedLocation!.latitude, _selectedLocation!.longitude),
+        photoUrl: photoUrl,
       ),
     );
   }
@@ -357,7 +409,13 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
                                   items: GratitudeCategory.values.map((category) {
                                     return DropdownMenuItem(
                                       value: category,
-                                      child: Text(category.label),
+                                      child: Row(
+                                        children: [
+                                          Text(category.emoji),
+                                          const SizedBox(width: 8),
+                                          Text(category.label),
+                                        ],
+                                      ),
                                     );
                                   }).toList(),
                                   onChanged: isSubmitting
@@ -384,6 +442,43 @@ class _AddGratitudeBottomSheetState extends State<AddGratitudeBottomSheet> {
                                   enabled: !isSubmitting,
                                 ),
                                 const SizedBox(height: 16),
+
+                                // Photo picker
+                                if (_selectedPhotoPath != null) ...[
+                                  Stack(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(
+                                          File(_selectedPhotoPath!),
+                                          height: 200,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: IconButton(
+                                          onPressed: _removePhoto,
+                                          icon: const Icon(Icons.close),
+                                          style: IconButton.styleFrom(
+                                            backgroundColor: Colors.black54,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                ] else ...[
+                                  OutlinedButton.icon(
+                                    onPressed: isSubmitting ? null : _pickPhoto,
+                                    icon: const Icon(Icons.add_photo_alternate),
+                                    label: const Text('Add Photo (optional)'),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
 
                                 // Location info with select button
                                 ValueListenableBuilder<bool>(

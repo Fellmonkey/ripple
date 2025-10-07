@@ -1,10 +1,12 @@
 import '../../../core/di/injection_container.dart';
 import '../data/datasources/gratitude_remote_datasource.dart';
+import '../data/datasources/storage_remote_datasource.dart';
 import '../data/repositories/gratitude_repository_impl.dart';
 import '../domain/repositories/gratitude_repository.dart';
 import '../domain/usecases/create_gratitude.dart';
 import '../domain/usecases/get_gratitudes.dart';
 import '../domain/usecases/toggle_like.dart';
+import '../domain/usecases/upload_photo.dart';
 import '../presentation/bloc/create_gratitude_bloc.dart';
 import '../presentation/bloc/gratitude_bloc.dart';
 
@@ -14,6 +16,12 @@ void initGratitudeDependencies() {
   sl.registerLazySingleton<GratitudeRemoteDataSource>(
     () => GratitudeRemoteDataSourceImpl(
       databases: sl(),
+    ),
+  );
+  
+  sl.registerLazySingleton<StorageRemoteDataSource>(
+    () => StorageRemoteDataSourceImpl(
+      storage: sl(),
     ),
   );
 
@@ -26,6 +34,9 @@ void initGratitudeDependencies() {
   sl.registerLazySingleton(() => GetGratitudesUseCase(sl()));
   sl.registerLazySingleton(() => CreateGratitudeUseCase(sl()));
   sl.registerLazySingleton(() => ToggleLikeUseCase(sl()));
+  sl.registerLazySingleton<UploadPhotoUseCase>(
+    () => UploadPhotoUseCaseImpl(storageDatasource: sl()),
+  );
 
   // BLoCs
   sl.registerFactory(

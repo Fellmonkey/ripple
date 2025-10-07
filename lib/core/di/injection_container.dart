@@ -20,6 +20,7 @@ Future<void> initializeDependencies() async {
   // Register Appwrite services
   sl.registerLazySingleton(() => appwriteService.account);
   sl.registerLazySingleton(() => appwriteService.databases);
+  sl.registerLazySingleton(() => appwriteService.storage);
 
   // Feature dependencies
   await initAuthDependencies(sl);

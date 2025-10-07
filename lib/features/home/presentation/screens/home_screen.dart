@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../gratitude/presentation/screens/add_gratitude_bottom_sheet.dart';
 import '../../../gratitude/presentation/screens/map_screen.dart';
+import '../widgets/feed_view.dart';
 
 /// Home screen with map and gratitude feed
 /// 
@@ -49,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedLocationNotifier: _selectedMapLocation,
             isSelectingLocationNotifier: _isSelectingLocation,
           ),
-          const _FeedView(),
+          const FeedView(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -84,35 +85,6 @@ class _HomeScreenState extends State<HomeScreen> {
         label: const Text('Add Thanks'),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
-}
-
-class _FeedView extends StatelessWidget {
-  const _FeedView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.grey[100],
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.format_list_bulleted, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Feed View',
-              style: TextStyle(fontSize: 24, color: Colors.grey),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'TODO: Implement gratitude feed',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
