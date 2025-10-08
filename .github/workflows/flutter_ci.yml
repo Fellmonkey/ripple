@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Install function package dependencies
+        working-directory: functions/translate
+        run: |
+          dart pub get
+
       - name: Create CI env file (no secrets committed)
         run: |
           mkdir -p assets
