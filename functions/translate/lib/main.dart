@@ -103,23 +103,16 @@ Future<String> translateText({
   required String apiKey,
   required Function(String) logger,
 }) async {
-  // Gemini API endpoint - using v1beta with gemini-2.5-flash (most stable)
-  final endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey';
+  // Gemini API endpoint - using v1beta with gemini-pro (most stable)
+  final endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey';
   
-  // Prepare prompt
+  // Prepare simple, direct prompt
   final languageName = targetLanguage == 'en' ? 'English' : 'Russian';
-  final prompt = '''
-Translate the following text to $languageName. 
-Provide ONLY the translation without any explanations, notes, or additional text.
-If the text is already in $languageName, return it as is.
-
-Text to translate:
-$text
-''';
+  final prompt = 'Translate to $languageName: $text';
 
   logger('Translating to $languageName...');
   logger('Text length: ${text.length} characters');
-  logger('Using Gemini API: v1beta/gemini-2.5-flash');
+  logger('Using Gemini API: v1beta/gemini-pro');
 
   try {
     // Use Appwrite Client to call external Gemini endpoint
