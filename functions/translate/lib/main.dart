@@ -103,8 +103,8 @@ Future<String> translateText({
   required String apiKey,
   required Function(String) logger,
 }) async {
-  // Gemini API endpoint - using v1beta with gemini-pro (most stable)
-  final endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey';
+  // Gemini API endpoint
+  final endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey';
   
   // Prepare simple, direct prompt
   final languageName = targetLanguage == 'en' ? 'English' : 'Russian';
@@ -134,7 +134,7 @@ Future<String> translateText({
         'temperature': 0.3,
         'topK': 40,
         'topP': 0.95,
-        'maxOutputTokens': 1024,
+        'maxOutputTokens': 2048,
       },
     })));
 
