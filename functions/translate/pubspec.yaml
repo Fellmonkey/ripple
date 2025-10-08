@@ -1,0 +1,10 @@
+name: translate
+description: Translation function using Gemini API
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  dart_appwrite: ^12.0.3
+  http: ^1.1.0
