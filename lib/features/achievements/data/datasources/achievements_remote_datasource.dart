@@ -34,7 +34,6 @@ class AchievementsRemoteDataSourceImpl implements AchievementsRemoteDataSource {
         Query.limit(100),
       ],
     );
-
     return response.rows.map(_mapToAchievementDefinition).toList();
   }
 
@@ -81,8 +80,8 @@ class AchievementsRemoteDataSourceImpl implements AchievementsRemoteDataSource {
     
     return AchievementDefinition(
       id: doc.$id,
-      title: data['title'] as String,
-      description: data['description'] as String,
+      title: data['titleKey'] as String,
+      description: data['descriptionKey'] as String,
       icon: data['icon'] as String,
       checkType: data['checkType'] as String,
       checkValue: (data['checkValue'] as num).toInt(),
