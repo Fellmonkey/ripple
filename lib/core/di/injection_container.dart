@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/di/auth_di.dart';
 import '../../features/gratitude/di/gratitude_di.dart';
+import '../../features/achievements/di/achievements_di.dart';
 import '../services/appwrite_service.dart';
 
 final sl = GetIt.instance;
@@ -25,4 +26,5 @@ Future<void> initializeDependencies() async {
   // Feature dependencies
   await initAuthDependencies(sl);
   initGratitudeDependencies();
+  setupAchievementsDependencies(sl);
 }

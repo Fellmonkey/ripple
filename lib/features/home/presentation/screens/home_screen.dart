@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../achievements/presentation/screens/achievements_screen.dart';
 import '../../../gratitude/presentation/screens/add_gratitude_bottom_sheet.dart';
 import '../../../gratitude/presentation/screens/map_screen.dart';
 import '../widgets/feed_view.dart';
@@ -39,8 +40,13 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.emoji_events_outlined),
+            tooltip: 'Achievements',
             onPressed: () {
-              // TODO: Navigate to achievements
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AchievementsScreen(),
+                ),
+              );
             },
           ),
         ],
