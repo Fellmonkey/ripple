@@ -27,8 +27,8 @@ Future<dynamic> main(final context) async {
   try {
     // Initialize Appwrite client (useful for Appwrite-specific operations/logging)
     final client = Client()
-      .setProject(context.env['APPWRITE_FUNCTION_PROJECT_ID'] ?? '')
-      .setKey(context.req.variables['GEMINI_API_KEY'] ?? '');
+      .setProject(Platform.environment['APPWRITE_FUNCTION_PROJECT_ID'] ?? '')
+      .setKey(context.req.headers['x-appwrite-key'] ?? '');
     context.log('Appwrite client initialized: ${client.runtimeType}');
 
     // Parse request body
@@ -61,7 +61,7 @@ Future<dynamic> main(final context) async {
     }
 
     // Get Gemini API key from environment
-  final apiKey = context.req.variables['GEMINI_API_KEY'];
+  final apiKey = Platform.environment['GEMINI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
       context.log('Error: GEMINI_API_KEY environment variable not set');
       return context.res.json({
