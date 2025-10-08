@@ -103,9 +103,8 @@ Future<String> translateText({
   required String apiKey,
   required Function(String) logger,
 }) async {
-  // Gemini API endpoint
-  // Gemini REST endpoint (Appwrite Client will handle headers)
-  final endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$apiKey';
+  // Gemini API endpoint - using v1 (stable) instead of v1beta
+  final endpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=$apiKey';
   
   // Prepare prompt
   final languageName = targetLanguage == 'en' ? 'English' : 'Russian';
@@ -120,6 +119,7 @@ $text
 
   logger('Translating to $languageName...');
   logger('Text length: ${text.length} characters');
+  logger('Using Gemini model: gemini-1.5-flash');
 
   try {
     // Use Appwrite Client to call external Gemini endpoint
@@ -146,30 +146,74 @@ $text
     })));
 
     final httpResponse = await request.close();
+    final statusCode = httpResponse.statusCode;
     final responseBody = await utf8.decoder.bind(httpResponse).join();
+    
+    logger('HTTP Status: $statusCode');
+    logger('Response body length: ${responseBody.length} chars');
+    logger('Response preview: ${responseBody.substring(0, responseBody.length > 500 ? 500 : responseBody.length)}');
+    
     dynamic data;
     try {
       data = jsonDecode(responseBody);
-    } catch (_) {
-      data = {};
+    } catch (e) {
+      logger('Failed to parse JSON response: $e');
+      logger('Raw response: $responseBody');
+      return text;
     }
     
+    // Check for API errors first
+    if (data['error'] != null) {
+      logger('Gemini API error: ${data['error']}');
+      return text;
+    }
+    
+    // Try to extract translation from response
+    String? extractedText;
+    
+    // Standard response structure
     if (data['candidates'] != null && 
-        data['candidates'].isNotEmpty &&
-        data['candidates'][0]['content'] != null &&
-        data['candidates'][0]['content']['parts'] != null &&
-        data['candidates'][0]['content']['parts'].isNotEmpty) {
+        data['candidates'] is List &&
+        data['candidates'].isNotEmpty) {
       
-      final translatedText = data['candidates'][0]['content']['parts'][0]['text']?.toString().trim() ?? text;
+      final candidate = data['candidates'][0];
+      logger('Candidate structure: ${candidate.keys.toList()}');
+      
+      if (candidate['content'] != null &&
+          candidate['content']['parts'] != null &&
+          candidate['content']['parts'] is List &&
+          candidate['content']['parts'].isNotEmpty) {
+        
+        extractedText = candidate['content']['parts'][0]['text']?.toString();
+      }
+      
+      // Alternative: sometimes text is directly in candidate
+      if (extractedText == null && candidate['text'] != null) {
+        extractedText = candidate['text'].toString();
+      }
+      
+      // Alternative: check output field
+      if (extractedText == null && candidate['output'] != null) {
+        extractedText = candidate['output'].toString();
+      }
+    }
+    
+    if (extractedText != null && extractedText.isNotEmpty) {
+      final translatedText = extractedText.trim();
       
       logger('Translation successful');
+      logger('Translated: "$translatedText"');
       logger('Translated length: ${translatedText.length} characters');
       
       return translatedText;
     }
 
     // If no translation found, return original
-    logger('Warning: No translation in response, returning original text');
+    logger('Warning: No translation in response structure, returning original text');
+    logger('Available keys in response: ${data.keys.toList()}');
+    if (data['candidates'] != null && data['candidates'].isNotEmpty) {
+      logger('First candidate keys: ${data['candidates'][0].keys.toList()}');
+    }
     return text;
   } catch (e) {
     logger('Error calling Gemini API: $e');
