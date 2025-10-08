@@ -26,12 +26,6 @@ abstract class GratitudeRemoteDataSource {
     String? parentId,
   });
 
-  /// Update gratitude likes
-  Future<GratitudeEntity> updateGratitudeLikes({
-    required String gratitudeId,
-    required int likes,
-  });
-
   /// Get gratitude replies (chains)
   Future<List<GratitudeEntity>> getGratitudeReplies(String parentId);
   
@@ -105,7 +99,7 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
 
     final gratitudes = response.rows.map(_mapToGratitudeEntity).toList();
     
-    // If we have gratitudes, count replies for each one
+    // If we have gratitudes, count replies and likes for each one
     if (gratitudes.isNotEmpty) {
       // Get all gratitude IDs
       final gratitudeIds = gratitudes.map((g) => g.gratitudeId).toList();
@@ -129,19 +123,40 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
         }
       }
       
-      // Get liked status if user is logged in
-      Set<String> likedGratitudeIds = {};
-      if (currentUserId != null) {
-        likedGratitudeIds = await getUserLikedGratitudeIds(
-          userId: currentUserId,
-          gratitudeIds: gratitudeIds,
-        );
+      // Fetch all likes for these gratitudes in ONE query
+      final likesResponse = await databases.listRows(
+        databaseId: AppwriteConfig.databaseId,
+        tableId: AppwriteConfig.userLikesCollectionId,
+        queries: [
+          Query.limit(5000), // Adjust if needed
+        ],
+      );
+      
+      // Count likes for each gratitude
+      final likesCountMap = <String, int>{};
+      final likedGratitudeIds = <String>{};
+      
+      for (final likeDoc in likesResponse.rows) {
+        final gratitudeId = likeDoc.data['gratitudeId'] as String?;
+        final userId = likeDoc.data['userId'] as String?;
+        
+        if (gratitudeId != null && gratitudeIds.contains(gratitudeId)) {
+          // Count total likes
+          likesCountMap[gratitudeId] = (likesCountMap[gratitudeId] ?? 0) + 1;
+          
+          // Track if current user liked this
+          if (currentUserId != null && userId == currentUserId) {
+            likedGratitudeIds.add(gratitudeId);
+          }
+        }
       }
       
-      // Update gratitudes with correct repliesCount and isLiked
+      // Update gratitudes with correct counts and isLiked status
       return gratitudes.map((g) {
         final replyCount = repliesCountMap[g.gratitudeId] ?? 0;
+        final likeCount = likesCountMap[g.gratitudeId] ?? 0;
         final isLiked = likedGratitudeIds.contains(g.gratitudeId);
+        
         return GratitudeEntity(
           gratitudeId: g.gratitudeId,
           authorId: g.authorId,
@@ -150,7 +165,7 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
           tags: g.tags,
           point: g.point,
           photo: g.photo,
-          likesCount: g.likesCount,
+          likesCount: likeCount,
           repliesCount: replyCount,
           parentId: g.parentId,
           createdAt: g.createdAt,
@@ -184,28 +199,13 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
         'point': [point.$1, point.$2], // Appwrite point type
         if (photoUrl != null) 'photo': photoUrl,
         if (parentId != null) 'parentId': parentId,
-        'likes': 0,
+        // 'likes' field removed - now calculated from user_likes table
       },
       permissions: [
         Permission.read(Role.any()),
         Permission.update(Role.user(userId)),
         Permission.delete(Role.user(userId)),
       ],
-    );
-
-    return _mapToGratitudeEntity(document);
-  }
-
-  @override
-  Future<GratitudeEntity> updateGratitudeLikes({
-    required String gratitudeId,
-    required int likes,
-  }) async {
-    final document = await databases.updateRow(
-      databaseId: AppwriteConfig.databaseId,
-      tableId: AppwriteConfig.gratitudesCollectionId,
-      rowId: gratitudeId,
-      data: {'likes': likes},
     );
 
     return _mapToGratitudeEntity(document);
@@ -242,7 +242,7 @@ class GratitudeRemoteDataSourceImpl implements GratitudeRemoteDataSource {
         (pointData[1] as num).toDouble(),
       ),
       photo: data['photo'] as String?,
-      likesCount: (data['likes'] as num?)?.toInt() ?? 0,
+      likesCount: 0, // Will be calculated in getGratitudes() from user_likes table
       repliesCount: 0, // Will be calculated in getGratitudes()
       parentId: data['parentId'] as String?,
       createdAt: DateTime.parse(doc.$createdAt),

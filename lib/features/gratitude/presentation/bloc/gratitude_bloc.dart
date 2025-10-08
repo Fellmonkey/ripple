@@ -215,8 +215,23 @@ class GratitudeBloc extends Bloc<GratitudeEvent, GratitudeState>
       isLiked: event.isLiked,
     );
 
-    // If failed, revert using extension method
-    if (result.isError) {
+    // If successful, refresh to get accurate counts from user_likes table
+    if (result.isSuccess) {
+      // Refresh gratitudes to get accurate like counts
+      final refreshResult = await getGratitudes(
+        category: currentState.activeCategory,
+        tags: currentState.activeTags,
+        currentUserId: event.userId,
+        searchQuery: currentState.searchQuery,
+      );
+      
+      if (refreshResult.isSuccess && refreshResult.data != null) {
+        emit(currentState.copyWith(
+          gratitudes: refreshResult.data!,
+        ));
+      }
+    } else {
+      // If failed, revert to previous state
       emit(currentState);
       if (kDebugMode) {
         print('❌ BLoC ERROR [GratitudeBloc.Toggle like]: ${result.failure?.userMessage}');

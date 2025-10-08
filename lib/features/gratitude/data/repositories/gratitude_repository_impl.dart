@@ -78,11 +78,19 @@ class GratitudeRepositoryImpl implements GratitudeRepository {
           );
         }
         
-        // Update the likes count in gratitudes collection
-        final newLikes = isLiked ? currentLikes - 1 : currentLikes + 1;
-        return remoteDataSource.updateGratitudeLikes(
+        // Return a dummy entity since we'll refresh the feed to get updated counts
+        // The UI uses optimistic updates so this return value isn't critical
+        return GratitudeEntity(
           gratitudeId: gratitudeId,
-          likes: newLikes,
+          authorId: '',
+          text: '',
+          category: '',
+          tags: const [],
+          point: (0.0, 0.0),
+          likesCount: isLiked ? currentLikes - 1 : currentLikes + 1,
+          repliesCount: 0,
+          createdAt: DateTime.now(),
+          isLiked: !isLiked,
         );
       },
       operationName: 'Toggle like',
